@@ -9,8 +9,12 @@ class HackerRank extends Controller
 
     public function __construct()
     {
-        $this->script_time_end = 0;
         $this->script_time_start = 0;
+        $this->script_time_end = 0;
+        $this->data_time_start = 0;
+        $this->data_time_end = 0;
+        $this->sort_time_start = 0;
+        $this->sort_time_end = 0;
     }
 
     /**
@@ -21,14 +25,12 @@ class HackerRank extends Controller
      */
     public function __invoke(Request $request)
     {
-        $this->script_time_start = microtime(true);
-        $this->data_time_start = microtime(true);
-        $this->test($request->case);
+        $this->test($request);
     }
 
     public function check($expected, $wins) {
+        $findings = [];
         if(count($expected) === count($wins)){
-            $findings = [];
             foreach($expected as $index => $expect){
                 $win = $wins[$index];
                 if($expect !== $win){
@@ -45,10 +47,9 @@ class HackerRank extends Controller
         return false;
     }
 
-    public function test($filename) {
-//        $a = [1,2,3,4,5,6,7,8,9,10,11,12];
-//        $a = array_splice($a, 0, 10);
-//        dd($a);
+    public function test($request) {
+        $filename = $request->case;
+        $this->data_time_start = microtime(true);
         $root_files_path = 'hacker-rank'.config('main.DS');
         $stdin = fopen(storage_path($root_files_path . 'input' . $filename . '.txt'), "r");
         fscanf($stdin, "%[^\n]", $nkq_temp);
@@ -73,35 +74,31 @@ class HackerRank extends Controller
             $expected[] = intval(fgets($stdout));
         }
         $this->data_time_end = microtime(true);
-//        dd([
-//            [$n, $q, $k],
-//            [count($fighters), count($queries), count($expected)]
-//        ]);
-        $resultDataSet = $this->fightingPits($k, $fighters, $queries);
-//        'script_time' => ($this->script_time_end - $this->script_time_start)/60 . ' Mins ::: ' . ($this->script_time_end - $this->script_time_start) . ' Seconds',
-//            'data_time' => ($this->data_time_end - $this->data_time_start)/60 . ' Mins ::: ' . ($this->data_time_end - $this->data_time_start) . ' Seconds',
-//            'wins' => $teamWins,
-//            'restricted_to' => $restrictWins,
+        $resultDataSet = $this->fightingPits($k, $fighters, $queries, $request);
         $wins = $resultDataSet['wins'];
         $restricted_to = intval($resultDataSet['restricted_to']);
         if($restricted_to > 0){
             $expected = array_splice($expected, 0, $restricted_to);
         }
         if($expected === $wins){
-            dd('All Test Cases Passed', $resultDataSet['script_time'], $resultDataSet['data_time']);
+            dd('All Test Cases Passed', $resultDataSet['script_time'], $resultDataSet['data_time'], $resultDataSet['sort_time']);
         }else{
             $result = $this->check($expected, $wins);
             if(!$result){
-                dd('All Test Cases Passed', $resultDataSet['script_time'], $resultDataSet['data_time']);
+                dd('All Test Cases Passed', $resultDataSet['script_time'], $resultDataSet['data_time'], $resultDataSet['sort_time']);
             }else{
-                dd('Failed Test Cases', $resultDataSet['script_time'], $resultDataSet['data_time'], $result);
+                dd('Failed Test Cases', $resultDataSet['script_time'], $resultDataSet['data_time'], $resultDataSet['sort_time'], $result);
             }
         }
     }
 
-    public function fightingPits($k, $fighters, $queries) {
+    public function fightingPits($k, $fighters, $queries, $request) {
+        $this->script_time_start = microtime(true);
         $debugQuery = -1; // 5
-        $restrictWins = 10;
+        if($request->has('r_wins'))
+            $restrictWins = intval($request->r_wins);
+        else
+            $restrictWins = -1;
         $teams = [];
         $teamWins = [];
         for ($team_init = 1; $team_init <= $k; $team_init++) {
@@ -110,14 +107,22 @@ class HackerRank extends Controller
         foreach($fighters as $fighter) {
             $teams[$fighter[1]][] = $fighter[0];
         }
+        $this->sort_time_start = microtime(true);
         foreach($teams as $teamIndex => $team){
             rsort($teams[$teamIndex]);
         }
+        $this->sort_time_end = microtime(true);
         $this->script_time_end = microtime(true);
+//        return [
+//            'script_time' => 'script ' . ($this->script_time_end - $this->script_time_start)/60 . ' Mins ::: ' . ($this->script_time_end - $this->script_time_start) . ' Seconds',
+//            'data_time' => 'data ' . ($this->data_time_end - $this->data_time_start)/60 . ' Mins ::: ' . ($this->data_time_end - $this->data_time_start) . ' Seconds',
+//            'sort_time' => 'sort ' . ($this->sort_time_end - $this->sort_time_start)/60 . ' Mins ::: ' . ($this->sort_time_end - $this->sort_time_start) . ' Seconds',
+//            'wins' => $teamWins,
+//            'restricted_to' => $restrictWins,
+//        ];
         foreach($queries as $queryIndex => $query) {
             if($query[0] === 1){
                 array_unshift($teams[$query[2]], $query[1]);
-//                rsort($teams[$query[2]]);
             }else{
                 $teamX = $teams[$query[1]];
                 $teamY = $teams[$query[2]];
@@ -215,8 +220,9 @@ class HackerRank extends Controller
         }
         $this->script_time_end = microtime(true);
         return [
-            'script_time' => ($this->script_time_end - $this->script_time_start)/60 . ' Mins ::: ' . ($this->script_time_end - $this->script_time_start) . ' Seconds',
-            'data_time' => ($this->data_time_end - $this->data_time_start)/60 . ' Mins ::: ' . ($this->data_time_end - $this->data_time_start) . ' Seconds',
+            'script_time' => 'script ' . ($this->script_time_end - $this->script_time_start) . ' Seconds',
+            'data_time' => 'data ' . ($this->data_time_end - $this->data_time_start) . ' Seconds',
+            'sort_time' => 'sort ' . ($this->sort_time_end - $this->sort_time_start) . ' Seconds',
             'wins' => $teamWins,
             'restricted_to' => $restrictWins,
         ];
