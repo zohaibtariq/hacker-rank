@@ -15,6 +15,10 @@ class HackerRank extends Controller
         $this->data_time_end = 0;
         $this->sort_time_start = 0;
         $this->sort_time_end = 0;
+        $this->team_time_start = 0;
+        $this->team_time_end = 0;
+        $this->query_time_start = 0;
+        $this->query_time_end = 0;
     }
 
     /**
@@ -57,11 +61,19 @@ class HackerRank extends Controller
         $n = intval($nkq[0]);
         $k = intval($nkq[1]);
         $q = intval($nkq[2]);
-        $fighters = array();
+        $teams = array();
+        $this->team_time_start = microtime(true);
         for ($fighters_row_itr = 0; $fighters_row_itr < $n; $fighters_row_itr++) {
             fscanf($stdin, "%[^\n]", $fighters_temp);
-            $fighters[] = array_map('intval', preg_split('/ /', $fighters_temp, -1, PREG_SPLIT_NO_EMPTY));
+            $fighters_data = array_map('intval', preg_split('/ /', $fighters_temp, -1, PREG_SPLIT_NO_EMPTY));
+            $teams[$fighters_data[1]][] = $fighters_data[0];
         }
+        $this->team_time_end = microtime(true);
+        $this->sort_time_start = microtime(true);
+        for ($teamIndex = 1; $teamIndex <= $k; $teamIndex++) {
+            rsort($teams[$teamIndex]);
+        }
+        $this->sort_time_end = microtime(true);
         $queries = array();
         for ($queries_row_itr = 0; $queries_row_itr < $q; $queries_row_itr++) {
             fscanf($stdin, "%[^\n]", $queries_temp);
@@ -74,52 +86,34 @@ class HackerRank extends Controller
             $expected[] = intval(fgets($stdout));
         }
         $this->data_time_end = microtime(true);
-        $resultDataSet = $this->fightingPits($k, $fighters, $queries, $request);
+        $resultDataSet = $this->fightingPits($request, $teams, $queries);
         $wins = $resultDataSet['wins'];
         $restricted_to = intval($resultDataSet['restricted_to']);
         if($restricted_to > 0){
             $expected = array_splice($expected, 0, $restricted_to);
         }
         if($expected === $wins){
-            dd('All Test Cases Passed', $resultDataSet['script_time'], $resultDataSet['data_time'], $resultDataSet['sort_time']);
+            dd('All Test Cases Passed', $resultDataSet['script_time'], $resultDataSet['data_time'], $resultDataSet['sort_time'], $resultDataSet['team_time'], $resultDataSet['query_time']);
         }else{
             $result = $this->check($expected, $wins);
             if(!$result){
-                dd('All Test Cases Passed', $resultDataSet['script_time'], $resultDataSet['data_time'], $resultDataSet['sort_time']);
+                dd('All Test Cases Passed', $resultDataSet['script_time'], $resultDataSet['data_time'], $resultDataSet['sort_time'], $resultDataSet['team_time'], $resultDataSet['query_time']);
             }else{
-                dd('Failed Test Cases', $resultDataSet['script_time'], $resultDataSet['data_time'], $resultDataSet['sort_time'], $result);
+                dd('Failed Test Cases', $resultDataSet['script_time'], $resultDataSet['data_time'], $resultDataSet['sort_time'], $resultDataSet['team_time'], $resultDataSet['query_time'], $result);
             }
         }
     }
 
-    public function fightingPits($k, $fighters, $queries, $request) {
+    public function fightingPits($request, $teams, $queries) {
         $this->script_time_start = microtime(true);
         $debugQuery = -1; // 5
         if($request->has('r_wins'))
             $restrictWins = intval($request->r_wins);
         else
             $restrictWins = -1;
-        $teams = [];
         $teamWins = [];
-        for ($team_init = 1; $team_init <= $k; $team_init++) {
-            $teams[$team_init] = [];
-        }
-        foreach($fighters as $fighter) {
-            $teams[$fighter[1]][] = $fighter[0];
-        }
-        $this->sort_time_start = microtime(true);
-        foreach($teams as $teamIndex => $team){
-            rsort($teams[$teamIndex]);
-        }
-        $this->sort_time_end = microtime(true);
-        $this->script_time_end = microtime(true);
-//        return [
-//            'script_time' => 'script ' . ($this->script_time_end - $this->script_time_start)/60 . ' Mins ::: ' . ($this->script_time_end - $this->script_time_start) . ' Seconds',
-//            'data_time' => 'data ' . ($this->data_time_end - $this->data_time_start)/60 . ' Mins ::: ' . ($this->data_time_end - $this->data_time_start) . ' Seconds',
-//            'sort_time' => 'sort ' . ($this->sort_time_end - $this->sort_time_start)/60 . ' Mins ::: ' . ($this->sort_time_end - $this->sort_time_start) . ' Seconds',
-//            'wins' => $teamWins,
-//            'restricted_to' => $restrictWins,
-//        ];
+
+        $this->query_time_start = microtime(true);
         foreach($queries as $queryIndex => $query) {
             if($query[0] === 1){
                 array_unshift($teams[$query[2]], $query[1]);
@@ -218,11 +212,14 @@ class HackerRank extends Controller
                 break;
             }
         }
+        $this->query_time_end = microtime(true);
         $this->script_time_end = microtime(true);
         return [
             'script_time' => 'script ' . ($this->script_time_end - $this->script_time_start) . ' Seconds',
             'data_time' => 'data ' . ($this->data_time_end - $this->data_time_start) . ' Seconds',
             'sort_time' => 'sort ' . ($this->sort_time_end - $this->sort_time_start) . ' Seconds',
+            'team_time' => 'team ' . ($this->team_time_end - $this->team_time_start) . ' Seconds',
+            'query_time' => 'query ' . ($this->query_time_end - $this->query_time_start) . ' Seconds',
             'wins' => $teamWins,
             'restricted_to' => $restrictWins,
         ];
