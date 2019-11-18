@@ -19,6 +19,8 @@ class HackerRank extends Controller
         $this->team_time_end = 0;
         $this->query_time_start = 0;
         $this->query_time_end = 0;
+        $this->teamWins = [];
+        $this->matchesDone = [];
     }
 
     /**
@@ -34,16 +36,14 @@ class HackerRank extends Controller
 
     public function check($expected, $wins) {
         $findings = [];
-        if(count($expected) === count($wins)){
-            foreach($expected as $index => $expect){
-                $win = $wins[$index];
-                if($expect !== $win){
-                    $issue = new \stdClass();
-                    $issue->array_index = $index;
-                    $issue->expected = $expect;
-                    $issue->win = $win;
-                    $findings[] = $issue;
-                }
+        foreach($expected as $index => $expect){
+            $win = $wins[$index];
+            if($expect !== $win){
+                $issue = new \stdClass();
+                $issue->array_index = $index;
+                $issue->expected = $expect;
+                $issue->win = $win;
+                $findings[] = $issue;
             }
         }
         if(count($findings) > 0)
@@ -97,7 +97,7 @@ class HackerRank extends Controller
         }
         $isTestCasesCountOK = count($wins) === count($expected);
         $missing = count(array_diff_assoc($expected, $wins));
-        if($isTestCasesCountOK && $missing === 0){
+        if($isTestCasesCountOK && $missing === 0 && $expected === $wins){
             dd('All Test Cases Passed 1.', $resultDataSet['script_time'], $resultDataSet['data_time'], $resultDataSet['sort_time'], $resultDataSet['team_time'], $resultDataSet['query_time']);
         }else{
             $result = $this->check($expected, $wins);
@@ -116,57 +116,62 @@ class HackerRank extends Controller
             $restrictWins = intval($request->r_wins);
         else
             $restrictWins = false;
-        $teamWins = [];
         $this->query_time_start = microtime(true);
-        $matches_done = [];
         foreach ($queries as $queryIndex => $query) {
             if (intval($query[0]) === 1) {
                 $teams[$query[2]][] = $query[1];
             }else if(intval($query[0]) === 2) {
                 $teamX = $teams[$query[1]];
                 $teamY = $teams[$query[2]];
-                $uniqueTeamX = array_unique($teamX);
-                sort($uniqueTeamX);
-                $uniqueTeamY = array_unique($teamY);
-                sort($uniqueTeamY);
-                if($uniqueTeamX === $uniqueTeamY){
-                    $teamX = array_diff_assoc($teamX, $teamY);
-                    $teamY = [];
+                $predicted_winner = false;
+                $matchString = $query[1].':'.$query[2].':'.array_sum($teamX).':'.array_sum($teamY);
+                if(isset($this->matchesDone[$matchString])){
+                    $predicted_winner = $this->matchesDone[$matchString];
                 }
-                if($teamX === $teamY || empty($teamY) || end($teamX) >= count($teamY) || ((end($teamX) +1 ) === count($teamY) && $teamX[0]===$teamY[0]) || (array_unique($teamX) === array_unique($teamY) && array_sum($teamX) >= array_sum($teamX))){
-                    continue;
-                }
-                else {
-                    $predicted_winner = false;
-                    if(isset($matches_done[$query[1].':'.$query[2].':'.array_sum($teamX).':'.array_sum($teamY)]))
-                        $predicted_winner = $matches_done[$query[1].':'.$query[2].':'.array_sum($teamX).':'.array_sum($teamY)];
-                    if($predicted_winner === false){
-                        while(!empty($teamX) && !empty($teamY)){
-                            if($teamX === $teamY || empty($teamY) || end($teamX) >= count($teamY) || ((end($teamX) +1 ) === count($teamY) && $teamX[0]===$teamY[0])){
-                                break;
+                if($predicted_winner === false){
+                    $uniqueTeamX = array_unique($teamX);
+                    $uniqueTeamY = array_unique($teamY);
+                    if($uniqueTeamX === $uniqueTeamY){
+                        if($teamX === $teamY){
+                            $this->addWinner($teamX, $teamY, $query[1], $query);
+                        }else{
+                            if($uniqueTeamX[0] === 1 && $uniqueTeamY[0] === 1){
+                                if(array_sum($teamX) >= array_sum($teamY)){
+                                    $this->addWinner($teamX, $teamY, $query[1], $query);
+                                }
+                                else{
+                                    $this->addWinner($teamX, $teamY, $query[2], $query);
+                                }
+                            }else{
+                                if(end($teamX) >= count($teamY)){
+                                    $this->addWinner($teamX, $teamY, $query[1], $query);
+                                }else{
+                                    $this->addWinner($teamX, $teamY, $query[2], $query);
+                                }
                             }
+                        }
+                    }
+                    else if($teamX === $teamY || empty($teamY) || end($teamX) >= count($teamY)){
+                        $this->addWinner($teamX, $teamY, $query[1], $query);
+                    }else{
+                        while(!empty($teamX) && !empty($teamY)){
                             array_splice($teamY,  -(end($teamX)));
                             if(!empty($teamY)){
-                                if(end($teamY)>=count($teamX)){
-                                    $teamX = array();
-                                    break;
-                                }
                                 array_splice($teamX,-(end($teamY)));
                             }
                         }
-                    }else{
-                        $teamWins[] = $predicted_winner;
-                        continue;
+                        if(!empty($teamX) && count($teamX) > 0){
+                            $this->addWinner($teamX, $teamY, $query[1], $query);
+                        }else if(!empty($teamY) && count($teamY) > 0){
+                            $this->addWinner($teamX, $teamY, $query[2], $query);
+                        }
                     }
-                }
-                if(!empty($teamX)){
-                    $teamWins[] = $query[1];
-                    $matches_done[$query[1].':'.$query[2].':'.array_sum($teamX).':'.array_sum($teamY)] = $query[1];
                 }else{
-                    $teamWins[] = $query[2];
-                    $matches_done[$query[1].':'.$query[2].':'.array_sum($teamX).':'.array_sum($teamY)] = $query[2];
+                    $this->addWinner($teamX, $teamY, $predicted_winner, $query);
                 }
             }
+            if($restrictWins !== false && intval($restrictWins) === count($this->teamWins))
+                break;
         }
         $this->query_time_end = microtime(true);
         $this->script_time_end = microtime(true);
@@ -176,13 +181,18 @@ class HackerRank extends Controller
             'sort_time' => 'sort ' . $this->timeDiffFormattedOutput($this->sort_time_end, $this->sort_time_start),
             'team_time' => 'team ' . $this->timeDiffFormattedOutput($this->team_time_end, $this->team_time_start),
             'query_time' => 'query ' . $this->timeDiffFormattedOutput($this->query_time_end, $this->query_time_start),
-            'wins' => $teamWins,
+            'wins' => $this->teamWins,
             'restricted_to' => $restrictWins,
         ];
     }
 
+    public function addWinner($teamX, $teamY, $teamWin, $query){
+        $this->teamWins[] = $teamWin;
+        $this->matchesDone[$query[1].':'.$query[2].':'.array_sum($teamX).':'.array_sum($teamY)] = $teamWin;
+    }
+
     public function timeDiffFormattedOutput($start_time, $end_time){
-        return sprintf('%f',($start_time - $end_time)) . ' Seconds' . ' | ' . ($start_time - $end_time) . 'Seconds';
+        return sprintf('%f',($start_time - $end_time)) . ' Seconds' . ' | ' . ($start_time - $end_time) . ' Seconds';
 //        return sprintf('%f',($start_time - $end_time)) . ' Seconds';
     }
 }
