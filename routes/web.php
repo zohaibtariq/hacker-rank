@@ -15,3 +15,4 @@ Route::get('/', function () {
     return view('welcome');
 });
 Route::get('hacker-rank', 'HackerRank');
+Route::get('morgan', 'Morgan');
