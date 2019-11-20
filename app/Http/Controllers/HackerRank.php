@@ -21,6 +21,8 @@ class HackerRank extends Controller
         $this->query_time_end = 0;
         $this->team_wins = [];
         $this->matches_done = [];
+        $this->team_fighters_count = [];
+        $this->team_total_strength = [];
     }
 
     /**
@@ -70,11 +72,17 @@ class HackerRank extends Controller
         }
         $this->team_time_end = microtime(true);
         $this->sort_time_start = microtime(true);
-        for ($teamIndex = 1; $teamIndex <= $k; $teamIndex++) {
-            if(isset($teams[$teamIndex]) && is_array($teams[$teamIndex]))
-                sort($teams[$teamIndex]);
-            else
-                $teams[$teamIndex] = [];
+        for ($teamNumber = 1; $teamNumber <= $k; $teamNumber++) {
+            if(isset($teams[$teamNumber]) && is_array($teams[$teamNumber]) && count($teams[$teamNumber]) > 0){
+                sort($teams[$teamNumber]);
+//                $this->team_fighters_count[$teamNumber] = count($teams[$teamNumber]);
+//                $this->team_total_strength[$teamNumber] = array_sum($teams[$teamNumber]);
+            }
+            else{
+                $teams[$teamNumber] = [];
+//                $this->team_fighters_count[$teamNumber] = 0;
+//                $this->team_total_strength[$teamNumber] = 0;
+            }
         }
         $this->sort_time_end = microtime(true);
         $queries = array();
@@ -90,6 +98,7 @@ class HackerRank extends Controller
         }
         $this->data_time_end = microtime(true);
         $resultDataSet = $this->fightingPits($request, $teams, $queries);
+        dd($resultDataSet);
         $wins = $resultDataSet['wins'];
         $restricted_to = intval($resultDataSet['restricted_to']);
         if($restricted_to > 0){
@@ -117,96 +126,31 @@ class HackerRank extends Controller
         else
             $restrict_wins = false;
         $this->query_time_start = microtime(true);
+        $final = [];
         foreach ($queries as $query_index => $query) {
-            if (intval($query[0]) === 1) {
-                $teams[$query[2]][] = $query[1];
-                // need to do update caching during add element
+            $equation = intval($query[0]);
+            if ($equation === 1) {
+                $strength = $query[1];
+                $team_number = $query[2];
+                $teams[$team_number][] = $strength;
+//                $this->team_fighters_count[$team_number] = count($teams[$team_number]);
+//                $this->team_total_strength[$team_number] = array_sum($teams[$team_number]);
+            }else if($equation === 2) {
                 $team_x = $teams[$query[1]];
                 $team_y = $teams[$query[2]];
-                $unique_team_x = array_unique($team_x);
-                $unique_team_y = array_unique($team_y);
-                if($unique_team_x === $unique_team_y){
-                    if($team_x === $team_y){
-                        $this->matches_done[$query[1].':'.$query[2].':'.count($team_x).':'.count($team_y)] = $query[1];
-                    }else{
-                        if($unique_team_x[0] === 1 && $unique_team_y[0] === 1){
-                            $winner_team = null;
-                            if(count($team_x) >= count($team_y) || array_sum($team_x) >= array_sum($team_y)){
-                                $winner_team = $query[1];
-                                $this->matches_done[$query[1].':'.$query[2].':'.count($team_x).':'.count($team_y)] = $winner_team;
-                            }
-                            else{
-                                $winner_team = $query[2];
-                                $this->matches_done[$query[1].':'.$query[2].':'.count($team_x).':'.count($team_y)] = $winner_team;
-                            }
-                        }else{
-                            if(end($team_x) >= count($team_y)){
-                                $this->matches_done[$query[1].':'.$query[2].':'.array_sum($team_x).':'.array_sum($team_y)] = $query[1];
-                            }else{
-                                $this->matches_done[$query[1].':'.$query[2].':'.array_sum($team_x).':'.array_sum($team_y)] = $query[2];
-                            }
-                        }
-                    }
-                }
-            }else if(intval($query[0]) === 2) {
-                $team_x = $teams[$query[1]];
-                $team_y = $teams[$query[2]];
-                $predicted_winner = false;
-                $matchString = $query[1].':'.$query[2].':'.array_sum($team_x).':'.array_sum($team_y);
-                if(isset($this->matches_done[$matchString]) && $this->matches_done[$matchString] !== '' && $predicted_winner = $this->matches_done[$matchString]){
-                    $this->addWinner($team_x, $team_y, $predicted_winner, $query);
-                }
-                else if($predicted_winner === false){
-                    $unique_team_x = array_unique($team_x);
-                    $unique_team_y = array_unique($team_y);
-                    if($unique_team_x === $unique_team_y){
-                        if($team_x === $team_y){
-                            $this->addWinner($team_x, $team_y, $query[1], $query);
-                        }else{
-                            if($unique_team_x[0] === 1 && $unique_team_y[0] === 1){
-                                $team_x = array_diff_assoc($teams[$query[1]], $teams[$query[2]]);
-                                $team_y = array_diff_assoc($teams[$query[2]], $teams[$query[1]]);
-                                $winner_team = null;
-                                if(count($team_x) >= count($team_y)){
-                                    $winner_team = $query[1];
-                                    $this->addWinner($team_x, $team_y, $winner_team, $query, true);
-                                }
-                                else{
-                                    $winner_team = $query[2];
-                                    $this->addWinner($team_x, $team_y, $winner_team, $query, true);
-                                }
-                            }else{
-                                if(end($team_x) >= count($team_y)){
-                                    $this->addWinner($team_x, $team_y, $query[1], $query);
-                                }else{
-                                    $this->addWinner($team_x, $team_y, $query[2], $query);
-                                }
-                            }
-                        }
-                    }
-                    else if($team_x === $team_y || empty($team_y) || end($team_x) >= count($team_y)){
-                        $this->addWinner($team_x, $team_y, $query[1], $query);
-                    }else{
-                        while(!empty($team_x) && !empty($team_y)){
-                            if($team_x === $team_y || empty($team_y) || end($team_x) >= count($team_y)) {
-                                break;
-                            }
-                            array_splice($team_y,  -(end($team_x)));
-                            if(!empty($team_y)){
-                                array_splice($team_x,-(end($team_y)));
-                            }
-                        }
-                        if(!empty($team_x) && count($team_x) > 0){
-                            $this->addWinner($team_x, $team_y, $query[1], $query);
-                        }else if(!empty($team_y) && count($team_y) > 0){
-                            $this->addWinner($team_x, $team_y, $query[2], $query);
-                        }
-                    }
-                }
+//                $unique_team_x = array_unique($team_x);
+//                $unique_team_y = array_unique($team_y);
+//                if($unique_team_x === $unique_team_y){
+//                    $final[0][] = 1;
+//                }else{
+//                    dd('in not unique');
+//                    $final[1][] = 0;
+//                }
             }
-            if($restrict_wins !== false && intval($restrict_wins) === count($this->team_wins))
-                break;
+//            if($restrict_wins !== false && intval($restrict_wins) === count($this->team_wins))
+//                break;
         }
+        dump($final);
         $this->query_time_end = microtime(true);
         $this->script_time_end = microtime(true);
         return [
