@@ -54,7 +54,7 @@ class HackerRank extends Controller
     public function test($request) {
         $filename = $request->case;
         $this->data_time_start = microtime(true);
-        $root_files_path = 'hacker-rank'.config('main.DS');
+        $root_files_path = 'hacker-rank'.config('main.DS').'fighting-pit'.config('main.DS');
         $stdin = fopen(storage_path($root_files_path . 'input' . $filename . '.txt'), "r");
         fscanf($stdin, "%[^\n]", $nkq_temp);
         $nkq = explode(' ', $nkq_temp);
