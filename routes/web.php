@@ -16,3 +16,4 @@ Route::get('/', function () {
 });
 Route::get('hacker-rank', 'HackerRank');
 Route::get('morgan', 'Morgan');
+Route::get('test', 'Test');

@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 
-class HackerRank extends Controller
+class HackerRankBackup extends Controller
 {
 
     public function __construct()
@@ -19,6 +19,8 @@ class HackerRank extends Controller
         $this->team_time_end = 0;
         $this->query_time_start = 0;
         $this->query_time_end = 0;
+        $this->team_wins = [];
+        $this->matches_done = [];
     }
 
     /**
@@ -34,16 +36,14 @@ class HackerRank extends Controller
 
     public function check($expected, $wins) {
         $findings = [];
-        if(count($expected) === count($wins)){
-            foreach($expected as $index => $expect){
-                $win = $wins[$index];
-                if($expect !== $win){
-                    $issue = new \stdClass();
-                    $issue->array_index = $index;
-                    $issue->expected = $expect;
-                    $issue->win = $win;
-                    $findings[] = $issue;
-                }
+        foreach($expected as $index => $expect){
+            $win = $wins[$index];
+            if($expect !== $win){
+                $issue = new \stdClass();
+                $issue->array_index = $index;
+                $issue->expected = $expect;
+                $issue->win = $win;
+                $findings[] = $issue;
             }
         }
         if(count($findings) > 0)
@@ -54,7 +54,7 @@ class HackerRank extends Controller
     public function test($request) {
         $filename = $request->case;
         $this->data_time_start = microtime(true);
-        $root_files_path = 'hacker-rank'.config('main.DS');
+        $root_files_path = 'hacker-rank'.config('main.DS').'fighting-pit'.config('main.DS');
         $stdin = fopen(storage_path($root_files_path . 'input' . $filename . '.txt'), "r");
         fscanf($stdin, "%[^\n]", $nkq_temp);
         $nkq = explode(' ', $nkq_temp);
@@ -97,7 +97,7 @@ class HackerRank extends Controller
         }
         $isTestCasesCountOK = count($wins) === count($expected);
         $missing = count(array_diff_assoc($expected, $wins));
-        if($isTestCasesCountOK && $missing === 0){
+        if($isTestCasesCountOK && $missing === 0 && $expected === $wins){
             dd('All Test Cases Passed 1.', $resultDataSet['script_time'], $resultDataSet['data_time'], $resultDataSet['sort_time'], $resultDataSet['team_time'], $resultDataSet['query_time']);
         }else{
             $result = $this->check($expected, $wins);
@@ -112,241 +112,127 @@ class HackerRank extends Controller
     public function fightingPits($request, $teams, $queries)
     {
         $this->script_time_start = microtime(true);
-        $debugQuery = -1; // 5
         if ($request->has('r_wins'))
-            $restrictWins = intval($request->r_wins);
+            $restrict_wins = intval($request->r_wins);
         else
-            $restrictWins = false;
-        $teamWins = [];
+            $restrict_wins = false;
         $this->query_time_start = microtime(true);
-//        if (true){
-        $matches_done = [];
-            foreach ($queries as $queryIndex => $query) {
-                if (intval($query[0]) === 1) {
-                    //if (false && $query[0] === 1) {
-                    // array_unshift($teams[$query[2]], $query[1]);
-                    $teams[$query[2]][] = $query[1];
-                    // } else if(false) {
-                    /*
-                    // Aftab start
+        foreach ($queries as $query_index => $query) {
+            if (intval($query[0]) === 1) {
+                $teams[$query[2]][] = $query[1];
+                // need to do update caching during add element
+                $team_x = $teams[$query[1]];
+                $team_y = $teams[$query[2]];
+                $unique_team_x = array_unique($team_x);
+                $unique_team_y = array_unique($team_y);
+                if($unique_team_x === $unique_team_y){
+                    if($team_x === $team_y){
+                        $this->matches_done[$query[1].':'.$query[2].':'.count($team_x).':'.count($team_y)] = $query[1];
                     }else{
-                        $teamX = $teams[$query[1]];
-                        $teamY =$teams[$query[2]];
-                        if($teamX===$teamY || empty($teamY) || end($teamX)>=count($teamY))                   {
-                            //break;
-                        }
-                        //    elseif(empty($teamX) || end($teamY)>=count($teamX))
-                        //    {
-                        //         $teamX = array();
-                        //        // break;
-                        //    }
-                        else{
-                            while(!empty($teamX) && !empty($teamY)){
-                                if($teamX===$teamY || empty($teamY) || end($teamX)>=count($teamY))                   {
-                                    break;
-                                }
-                                array_splice($teamY,  -(end($teamX)));
-
-                                if(!empty($teamY)){
-                                    if(end($teamY)>=count($teamX)){
-                                        //unset($teamX);
-                                        $teamX = array();
-                                        break;
-                                    }
-                                    array_splice($teamX,-(end($teamY)));
-                                }
+                        if($unique_team_x[0] === 1 && $unique_team_y[0] === 1){
+                            $winner_team = null;
+                            if(count($team_x) >= count($team_y) || array_sum($team_x) >= array_sum($team_y)){
+                                $winner_team = $query[1];
+                                $this->matches_done[$query[1].':'.$query[2].':'.count($team_x).':'.count($team_y)] = $winner_team;
                             }
-                        }
-
-                        if(!empty($teamX)){
-                            $teamWins[] = $query[1];
-                        }else{
-                            $teamWins[] = $query[2];
-                        }
-                    }
-                    // aftab end
-                    */
-                    /**/
-                    // zohaib start
-                }else if(intval($query[0]) === 2) {
-                    $teamX = $teams[$query[1]];
-                    $teamY = $teams[$query[2]];
-                    if($teamX === $teamY || empty($teamY) || end($teamX) >= count($teamY) || ((end($teamX) +1 ) === count($teamY) && $teamX[0]===$teamY[0])){
-                         $teamWins[] = $query[1];
-                         $matches_done[$query[1].':'.$query[2].':'.array_sum($teamX).':'.array_sum($teamY)] = $query[1];
-                         continue;
-                    }
-//                    if($query[1] === 32 && $query[2] === 86){
-//                        dd($teamX, $teamY);
-//                    }
-
-
-//                    dd(array_sum($teamX), array_sum($teamY));
-//                    dd(count($teamX), count($teamY));
-//                    dd($teamX, $teamY);
-//                    if ($queryIndex === $debugQuery) {
-//                        dump('Query => 2 X Y');
-//                        dump($query);
-//                        dump('Match Between');
-//                        dump($query[1]);
-//                        dump($query[2]);
-//                        dump('Before Match');
-//                        dump('TeamX');
-//                        dump($teamX);
-//                        dump($teams[$query[1]]);
-//                        dump('TeamY');
-//                        dump($teamY);
-//                        dump($teams[$query[2]]);
-//                    }
-//                    $canPlay = true;
-                    else {
-                        $predicted_winner = false;
-                        if(isset($matches_done[$query[1].':'.$query[2].':'.array_sum($teamX).':'.array_sum($teamY)]))
-                            $predicted_winner = $matches_done[$query[1].':'.$query[2].':'.array_sum($teamX).':'.array_sum($teamY)];
-                        if(!$predicted_winner){
-                            while(!empty($teamX) && !empty($teamY)){
-                                if($teamX === $teamY || empty($teamY) || end($teamX) >= count($teamY) || ((end($teamX) +1 ) === count($teamY) && $teamX[0]===$teamY[0]) ){
-                                    dump('break 1 : ');
-                                    break;
-                                }
-                                array_splice($teamY,  -(end($teamX)));
-                                if(!empty($teamY)){
-                                    if(end($teamY)>=count($teamX)){
-                                        $teamX = array();
-                                        dump('break 2 : ');
-                                        break;
-                                    }
-                                    array_splice($teamX,-(end($teamY)));
-                                }
+                            else{
+                                $winner_team = $query[2];
+                                $this->matches_done[$query[1].':'.$query[2].':'.count($team_x).':'.count($team_y)] = $winner_team;
                             }
                         }else{
-                            $teamWins[] = $predicted_winner;
-                            dump('continue : ');
-                            continue;
-                        }
-                        /*
-                        while (count($teamX) > 0 && count($teamY) > 0 && !in_array($query[1] . ':' . $query[2], $matches_done)) {
-//                        $matches_done[] = $query[1].':'.$query[2];
-//                        if($query[1] === 95 && $query[2] === 78){
-//                            dump('Match Between ' . $query[1] . ' & ' . $query[2]);
-//                            dump($matches_done);
-//                        }
-//                        if ($queryIndex === $debugQuery) {
-//                            dump('<<<< while fight starts');
-//                            dump('Before X fight');
-//                            dump('TeamX');
-//                            dump($teamX);
-//                            dump($teams[$query[1]]);
-//                            dump('TeamY');
-//                            dump($teamY);
-//                            dump($teams[$query[2]]);
-//                        }
-                            array_splice($teamY, (intval($teamX[0]) * -1), intval($teamX[0]));
-                            //array_splice($teamY, 0, $teamX[0]);
-//                        if ($queryIndex === $debugQuery) {
-//                            dump('After X fight');
-//                            dump('TeamX');
-//                            dump($teamX);
-//                            dump($teams[$query[1]]);
-//                            dump('TeamY');
-//                            dump($teamY);
-//                            dump($teams[$query[2]]);
-//                        }
-//                        if ($queryIndex === $debugQuery) {
-//                            dump('Before Y fight');
-//                            dump('TeamX');
-//                            dump($teamX);
-//                            dump($teams[$query[1]]);
-//                            dump('TeamY');
-//                            dump($teamY);
-//                            dump($teams[$query[2]]);
-//                        }
-                            if (count($teamY) > 0) {
-//                            if ($queryIndex === $debugQuery) {
-//                                dump('Y has first so will fight');
-//                            }
-                                // array_splice($teamX, 0, $teamY[0]);
-                                array_splice($teamX, (intval($teamY[0]) * -1), intval($teamY[0]));
+                            if(end($team_x) >= count($team_y)){
+                                $this->matches_done[$query[1].':'.$query[2].':'.array_sum($team_x).':'.array_sum($team_y)] = $query[1];
+                            }else{
+                                $this->matches_done[$query[1].':'.$query[2].':'.array_sum($team_x).':'.array_sum($team_y)] = $query[2];
                             }
-//                        if ($queryIndex === $debugQuery) {
-//                            dump('After Y fight');
-//                            dump('TeamX');
-//                            dump($teamX);
-//                            dump($teams[$query[1]]);
-//                            dump('TeamY');
-//                            dump($teamY);
-//                            dump($teams[$query[2]]);
-//                            dump('while fight ends >>>');
-//                        }
-//                        $canPlay = false;
-                            $matches_done[] = $query[1] . ':' . $query[2];
                         }
-                        */
-                    }
-//                    if ($queryIndex === $debugQuery) {
-//                        dump('After Match');
-//                        dump('TeamX');
-//                        dump($teamX);
-//                        dump($teams[$query[1]]);
-//                        dump('TeamY');
-//                        dump($teamY);
-//                        dump($teams[$query[2]]);
-//                    }
-
-                    // $teamXStrength = array_sum($teamX);
-                    // $teamYStrength = array_sum($teamY);
-//                   dd(
-//                        $teamX, count($teamX), $teamXStrength,
-//                        $teamY, count($teamY), $teamYStrength
-//                    );
-                    // if(($teamXStrength + 1) >= $teamYStrength){
-                    /*if (count($teamX) > 0) {
-//                        if ($queryIndex === $debugQuery) {
-//                            dump('Team X Win');
-//                            dump($query[1]);
-//                            dump('Team Y Lose');
-//                            dump($query[2]);
-//                        }
-                        $teamWins[] = $query[1];
-                    } else {
-//                        if ($queryIndex === $debugQuery) {
-//                            dump('Team Y Win');
-//                            dump($query[2]);
-//                            dump('Team X Lose');
-//                            dump($query[1]);
-//                        }
-                        $teamWins[] = $query[2];
-                    }*/
-                    if(!empty($teamX)){
-                        $teamWins[] = $query[1];
-                        $matches_done[$query[1].':'.$query[2].':'.array_sum($teamX).':'.array_sum($teamY)] = $query[1];
-                    }else{
-                        $teamWins[] = $query[2];
-                        $matches_done[$query[1].':'.$query[2].':'.array_sum($teamX).':'.array_sum($teamY)] = $query[2];
                     }
                 }
-//                if ($restrictWins !== false && intval(count($teamWins)) === intval($restrictWins)) {
-//                    break;
-//                }
-                // zohaib end
-                /**/
+            }else if(intval($query[0]) === 2) {
+                $team_x = $teams[$query[1]];
+                $team_y = $teams[$query[2]];
+                $predicted_winner = false;
+                $matchString = $query[1].':'.$query[2].':'.array_sum($team_x).':'.array_sum($team_y);
+                if(isset($this->matches_done[$matchString]) && $this->matches_done[$matchString] !== '' && $predicted_winner = $this->matches_done[$matchString]){
+                    $this->addWinner($team_x, $team_y, $predicted_winner, $query);
+                }
+                else if($predicted_winner === false){
+                    $unique_team_x = array_unique($team_x);
+                    $unique_team_y = array_unique($team_y);
+                    if($unique_team_x === $unique_team_y){
+                        if($team_x === $team_y){
+                            $this->addWinner($team_x, $team_y, $query[1], $query);
+                        }else{
+                            if($unique_team_x[0] === 1 && $unique_team_y[0] === 1){
+                                $team_x = array_diff_assoc($teams[$query[1]], $teams[$query[2]]);
+                                $team_y = array_diff_assoc($teams[$query[2]], $teams[$query[1]]);
+                                $winner_team = null;
+                                if(count($team_x) >= count($team_y)){
+                                    $winner_team = $query[1];
+                                    $this->addWinner($team_x, $team_y, $winner_team, $query, true);
+                                }
+                                else{
+                                    $winner_team = $query[2];
+                                    $this->addWinner($team_x, $team_y, $winner_team, $query, true);
+                                }
+                            }else{
+                                if(end($team_x) >= count($team_y)){
+                                    $this->addWinner($team_x, $team_y, $query[1], $query);
+                                }else{
+                                    $this->addWinner($team_x, $team_y, $query[2], $query);
+                                }
+                            }
+                        }
+                    }
+                    else if($team_x === $team_y || empty($team_y) || end($team_x) >= count($team_y)){
+                        $this->addWinner($team_x, $team_y, $query[1], $query);
+                    }else{
+                        while(!empty($team_x) && !empty($team_y)){
+                            if($team_x === $team_y || empty($team_y) || end($team_x) >= count($team_y)) {
+                                break;
+                            }
+                            array_splice($team_y,  -(end($team_x)));
+                            if(!empty($team_y)){
+                                array_splice($team_x,-(end($team_y)));
+                            }
+                        }
+                        if(!empty($team_x) && count($team_x) > 0){
+                            $this->addWinner($team_x, $team_y, $query[1], $query);
+                        }else if(!empty($team_y) && count($team_y) > 0){
+                            $this->addWinner($team_x, $team_y, $query[2], $query);
+                        }
+                    }
+                }
             }
-//        }
+            if($restrict_wins !== false && intval($restrict_wins) === count($this->team_wins))
+                break;
+        }
         $this->query_time_end = microtime(true);
         $this->script_time_end = microtime(true);
         return [
-            'script_time' => 'script ' . $this->timeDiffFormattedOutput($this->script_time_end, $this->script_time_start),
-            'data_time' => 'data ' . $this->timeDiffFormattedOutput($this->data_time_end, $this->data_time_start),
-            'sort_time' => 'sort ' . $this->timeDiffFormattedOutput($this->sort_time_end, $this->sort_time_start),
-            'team_time' => 'team ' . $this->timeDiffFormattedOutput($this->team_time_end, $this->team_time_start),
-            'query_time' => 'query ' . $this->timeDiffFormattedOutput($this->query_time_end, $this->query_time_start),
-            'wins' => $teamWins,
-            'restricted_to' => $restrictWins,
+            'script_time' => 'script ' . $this->time_diff_formatted_output($this->script_time_end, $this->script_time_start),
+            'data_time' => 'data ' . $this->time_diff_formatted_output($this->data_time_end, $this->data_time_start),
+            'sort_time' => 'sort ' . $this->time_diff_formatted_output($this->sort_time_end, $this->sort_time_start),
+            'team_time' => 'team ' . $this->time_diff_formatted_output($this->team_time_end, $this->team_time_start),
+            'query_time' => 'query ' . $this->time_diff_formatted_output($this->query_time_end, $this->query_time_start),
+            'wins' => $this->team_wins,
+            'restricted_to' => $restrict_wins,
         ];
     }
 
-    public function timeDiffFormattedOutput($start_time, $end_time){
-        return sprintf('%f',($start_time - $end_time)) . ' Seconds' . ' | ' . ($start_time - $end_time) . 'Seconds';
+    public function addWinner($team_x, $team_y, $team_win, $query, $doCount = false){
+        if($team_win === true){
+            dd(count($team_x), count($team_y), $team_win, $query, $doCount);
+        }
+        $this->team_wins[] = $team_win;
+        if($doCount === true)
+            $this->matches_done[$query[1].':'.$query[2].':'.count($team_x).':'.count($team_y)] = $team_win;
+        else
+            $this->matches_done[$query[1].':'.$query[2].':'.array_sum($team_x).':'.array_sum($team_y)] = $team_win;
+    }
+
+    public function time_diff_formatted_output($start_time, $end_time){
+        return sprintf('%f',($start_time - $end_time)) . ' Seconds' . ' | ' . ($start_time - $end_time) . ' Seconds';
 //        return sprintf('%f',($start_time - $end_time)) . ' Seconds';
     }
 }

@@ -19,8 +19,10 @@ class HackerRank extends Controller
         $this->team_time_end = 0;
         $this->query_time_start = 0;
         $this->query_time_end = 0;
-        $this->teamWins = [];
-        $this->matchesDone = [];
+        $this->team_wins = [];
+        $this->matches_done = [];
+        $this->team_fighters_count = [];
+        $this->team_total_strength = [];
     }
 
     /**
@@ -70,11 +72,17 @@ class HackerRank extends Controller
         }
         $this->team_time_end = microtime(true);
         $this->sort_time_start = microtime(true);
-        for ($teamIndex = 1; $teamIndex <= $k; $teamIndex++) {
-            if(isset($teams[$teamIndex]) && is_array($teams[$teamIndex]))
-                sort($teams[$teamIndex]);
-            else
-                $teams[$teamIndex] = [];
+        for ($teamNumber = 1; $teamNumber <= $k; $teamNumber++) {
+            if(isset($teams[$teamNumber]) && is_array($teams[$teamNumber]) && count($teams[$teamNumber]) > 0){
+                sort($teams[$teamNumber]);
+//                $this->team_fighters_count[$teamNumber] = count($teams[$teamNumber]);
+//                $this->team_total_strength[$teamNumber] = array_sum($teams[$teamNumber]);
+            }
+            else{
+                $teams[$teamNumber] = [];
+//                $this->team_fighters_count[$teamNumber] = 0;
+//                $this->team_total_strength[$teamNumber] = 0;
+            }
         }
         $this->sort_time_end = microtime(true);
         $queries = array();
@@ -90,6 +98,7 @@ class HackerRank extends Controller
         }
         $this->data_time_end = microtime(true);
         $resultDataSet = $this->fightingPits($request, $teams, $queries);
+        dd($resultDataSet);
         $wins = $resultDataSet['wins'];
         $restricted_to = intval($resultDataSet['restricted_to']);
         if($restricted_to > 0){
@@ -113,85 +122,60 @@ class HackerRank extends Controller
     {
         $this->script_time_start = microtime(true);
         if ($request->has('r_wins'))
-            $restrictWins = intval($request->r_wins);
+            $restrict_wins = intval($request->r_wins);
         else
-            $restrictWins = false;
+            $restrict_wins = false;
         $this->query_time_start = microtime(true);
-        foreach ($queries as $queryIndex => $query) {
-            if (intval($query[0]) === 1) {
-                $teams[$query[2]][] = $query[1];
-            }else if(intval($query[0]) === 2) {
-                $teamX = $teams[$query[1]];
-                $teamY = $teams[$query[2]];
-                $predicted_winner = false;
-                $matchString = $query[1].':'.$query[2].':'.array_sum($teamX).':'.array_sum($teamY);
-                if(isset($this->matchesDone[$matchString])){
-                    $predicted_winner = $this->matchesDone[$matchString];
-                }
-                if($predicted_winner === false){
-                    $uniqueTeamX = array_unique($teamX);
-                    $uniqueTeamY = array_unique($teamY);
-                    if($uniqueTeamX === $uniqueTeamY){
-                        if($teamX === $teamY){
-                            $this->addWinner($teamX, $teamY, $query[1], $query);
-                        }else{
-                            if($uniqueTeamX[0] === 1 && $uniqueTeamY[0] === 1){
-                                if(array_sum($teamX) >= array_sum($teamY)){
-                                    $this->addWinner($teamX, $teamY, $query[1], $query);
-                                }
-                                else{
-                                    $this->addWinner($teamX, $teamY, $query[2], $query);
-                                }
-                            }else{
-                                if(end($teamX) >= count($teamY)){
-                                    $this->addWinner($teamX, $teamY, $query[1], $query);
-                                }else{
-                                    $this->addWinner($teamX, $teamY, $query[2], $query);
-                                }
-                            }
-                        }
-                    }
-                    else if($teamX === $teamY || empty($teamY) || end($teamX) >= count($teamY)){
-                        $this->addWinner($teamX, $teamY, $query[1], $query);
-                    }else{
-                        while(!empty($teamX) && !empty($teamY)){
-                            array_splice($teamY,  -(end($teamX)));
-                            if(!empty($teamY)){
-                                array_splice($teamX,-(end($teamY)));
-                            }
-                        }
-                        if(!empty($teamX) && count($teamX) > 0){
-                            $this->addWinner($teamX, $teamY, $query[1], $query);
-                        }else if(!empty($teamY) && count($teamY) > 0){
-                            $this->addWinner($teamX, $teamY, $query[2], $query);
-                        }
-                    }
-                }else{
-                    $this->addWinner($teamX, $teamY, $predicted_winner, $query);
-                }
+        $final = [];
+        foreach ($queries as $query_index => $query) {
+            $equation = intval($query[0]);
+            if ($equation === 1) {
+                $strength = $query[1];
+                $team_number = $query[2];
+                $teams[$team_number][] = $strength;
+//                $this->team_fighters_count[$team_number] = count($teams[$team_number]);
+//                $this->team_total_strength[$team_number] = array_sum($teams[$team_number]);
+            }else if($equation === 2) {
+                $team_x = $teams[$query[1]];
+                $team_y = $teams[$query[2]];
+//                $unique_team_x = array_unique($team_x);
+//                $unique_team_y = array_unique($team_y);
+//                if($unique_team_x === $unique_team_y){
+//                    $final[0][] = 1;
+//                }else{
+//                    dd('in not unique');
+//                    $final[1][] = 0;
+//                }
             }
-            if($restrictWins !== false && intval($restrictWins) === count($this->teamWins))
-                break;
+//            if($restrict_wins !== false && intval($restrict_wins) === count($this->team_wins))
+//                break;
         }
+        dump($final);
         $this->query_time_end = microtime(true);
         $this->script_time_end = microtime(true);
         return [
-            'script_time' => 'script ' . $this->timeDiffFormattedOutput($this->script_time_end, $this->script_time_start),
-            'data_time' => 'data ' . $this->timeDiffFormattedOutput($this->data_time_end, $this->data_time_start),
-            'sort_time' => 'sort ' . $this->timeDiffFormattedOutput($this->sort_time_end, $this->sort_time_start),
-            'team_time' => 'team ' . $this->timeDiffFormattedOutput($this->team_time_end, $this->team_time_start),
-            'query_time' => 'query ' . $this->timeDiffFormattedOutput($this->query_time_end, $this->query_time_start),
-            'wins' => $this->teamWins,
-            'restricted_to' => $restrictWins,
+            'script_time' => 'script ' . $this->time_diff_formatted_output($this->script_time_end, $this->script_time_start),
+            'data_time' => 'data ' . $this->time_diff_formatted_output($this->data_time_end, $this->data_time_start),
+            'sort_time' => 'sort ' . $this->time_diff_formatted_output($this->sort_time_end, $this->sort_time_start),
+            'team_time' => 'team ' . $this->time_diff_formatted_output($this->team_time_end, $this->team_time_start),
+            'query_time' => 'query ' . $this->time_diff_formatted_output($this->query_time_end, $this->query_time_start),
+            'wins' => $this->team_wins,
+            'restricted_to' => $restrict_wins,
         ];
     }
 
-    public function addWinner($teamX, $teamY, $teamWin, $query){
-        $this->teamWins[] = $teamWin;
-        $this->matchesDone[$query[1].':'.$query[2].':'.array_sum($teamX).':'.array_sum($teamY)] = $teamWin;
+    public function addWinner($team_x, $team_y, $team_win, $query, $doCount = false){
+        if($team_win === true){
+            dd(count($team_x), count($team_y), $team_win, $query, $doCount);
+        }
+        $this->team_wins[] = $team_win;
+        if($doCount === true)
+            $this->matches_done[$query[1].':'.$query[2].':'.count($team_x).':'.count($team_y)] = $team_win;
+        else
+            $this->matches_done[$query[1].':'.$query[2].':'.array_sum($team_x).':'.array_sum($team_y)] = $team_win;
     }
 
-    public function timeDiffFormattedOutput($start_time, $end_time){
+    public function time_diff_formatted_output($start_time, $end_time){
         return sprintf('%f',($start_time - $end_time)) . ' Seconds' . ' | ' . ($start_time - $end_time) . ' Seconds';
 //        return sprintf('%f',($start_time - $end_time)) . ' Seconds';
     }
