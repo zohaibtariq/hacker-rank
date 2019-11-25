@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 
-class Morgan extends Controller
+class MorganBackup extends Controller
 {
 
     /**
@@ -19,55 +19,100 @@ class Morgan extends Controller
     }
 
     public function morganAndString($a, $b){
+//        $string1 = 'AABAB';
+//        $string2 = 'AABAA';
+//        $arr_string_1 = str_split($string1);
+//        $arr_string_2 = str_split($string2);
+//        $sum_string_1 = 0;
+//        $sum_string_2 = 0;
+//        foreach($arr_string_1 as $item){
+//            $sum_string_1 += ord($item);
+//        }
+//        foreach($arr_string_2 as $item){
+//            $sum_string_2 += ord($item);
+//        }
+//        dd($sum_string_1, $sum_string_2);
+        // dd($string1 < $string2, ord($string1) < ord($string2), ord($string1), ord($string2));
+        // dd(ord('A'),ord('Z'),ord('a'), ord('z'));
         $string = '';
         $debug = false;
         while(isset($a[0]) && isset($b[0])){
             $ord_first_a = ord($a[0]);
             $ord_first_b = ord($b[0]);
-            if($debug){
-                dump('while start');
-                dump($a[0] . ':' . $ord_first_a . '<>' . $b[0] . ':' . $ord_first_b);
-                dd('while end');
-            }
+//            if($debug){
+//                dump('while start');
+//                dump($a[0] . ':' . $ord_first_a . '<>' . $b[0] . ':' . $ord_first_b);
+//                dump($a, $b, $string);
+//                dump(strlen($a), strlen($b), strlen($string));
+//                dd('while end');
+//            }
             if($ord_first_a < $ord_first_b){
                 $string .= $a[0];
-                if($this->matched($string))
-                    $debug = true;
+//                if($this->matched($string))
+//                    $debug = true;
                 $a = substr($a, 1);
             }
             else if($ord_first_a > $ord_first_b){
                 $string .= $b[0];
-                if($this->matched($string))
-                    $debug = true;
+//                if($this->matched($string))
+//                    $debug = true;
                 $b = substr($b, 1);
-            }else if($ord_first_a === $ord_first_b){
-                $ord_second_a = (isset($a[1]))?ord($a[1]):0;
-                $ord_second_b = (isset($b[1]))?ord($b[1]):0;
-
-                if(($ord_first_a + $ord_second_a) < ($ord_first_b + $ord_second_b)){
+            }
+//            else if($ord_first_a === $ord_first_b && (!isset($a[1]) || !isset($b[1]))){
+//                $string .= $a[0];
+//                $a = substr($a, 1);
+//            }
+            else if($ord_first_a === $ord_first_b){
+                $string1 = $a;
+                $string2 = $b;
+                $arr_string_1 = str_split($string1);
+                $arr_string_2 = str_split($string2);
+                $sum_string_1 = 0;
+                $sum_string_2 = 0;
+                foreach($arr_string_1 as $item){
+                    $sum_string_1 += ord($item);
+                }
+                foreach($arr_string_2 as $item){
+                    $sum_string_2 += ord($item);
+                }
+                if($sum_string_1 < $sum_string_2){
                     $string .= $a[0];
-                    if($this->matched($string))
-                        $debug = true;
                     $a = substr($a, 1);
-                }else{
+                }else if($sum_string_2 < $sum_string_1){
                     $string .= $b[0];
-                    if($this->matched($string))
-                        $debug = true;
                     $b = substr($b, 1);
                 }
+                /*$longer_length = (strlen($a) >= strlen($b))?strlen($a):strlen($b);
+                for($counter = 0; $counter < $longer_length; $counter++){
+                    if(!isset($a[$counter]) || !isset($b[$counter]))
+                        break;
+                    if(ord($a[$counter]) === ord($b[$counter])){
+                        continue;
+                    }else if(ord($a[$counter]) < ord($b[$counter])){
+                        $string .= $a[0];
+                        $a = substr($a, 1);
+                        break;
+                    }else if(ord($a[$counter]) > ord($b[$counter])){
+                        $string .= $b[0];
+                        $b = substr($b, 1);
+                        break;
+                    }
+                }
+                exit;
+                dump($a[0] . ' and ' . $b[0] . ' are equal out.', $a, $b);*/
             }
         }
         $debug2 = false;
         $remaining_string = (($a !== '' && $b === '')?$a:(($b !== '' && $a === '')?$b:''));
         $remaining_string_count = strlen($remaining_string);
         for($i=0; $i < $remaining_string_count; $i++){
-            if($debug2){
-                dump('remaining_string');
-                dd($remaining_string);
-            }
+//            if($debug2){
+//                dump('remaining_string');
+//                dd($remaining_string);
+//            }
             $string .= $remaining_string[0];
-            if($this->matched($string))
-                $debug2 = true;
+//            if($this->matched($string))
+//                $debug2 = true;
             $remaining_string = substr($remaining_string, 1);
         }
         return $string;
@@ -91,8 +136,11 @@ class Morgan extends Controller
             fscanf($stdin, "%[^\n]", $a);
             $b = '';
             fscanf($stdin, "%[^\n]", $b);
+            $a = 'AABAABA'; //'YZZYZYYZZYYZYZZY';
+            $b = 'AABABAA'; //'ZZYZYYZZYYZYZZY';
             $result = $this->morganAndString($a, $b);
             $strings[] = $result;
+            break;
         }
         fclose($stdin);
         $stdout = fopen(storage_path($root_files_path . 'output' . $filename . '.txt'), "r");
@@ -101,6 +149,14 @@ class Morgan extends Controller
             $expected[] = trim(preg_replace('/\s\s+/', '', fgets($stdout)));
         }
         fclose($stdout);
+        var_dump($strings[0] === 'AABAABA', $strings[0]);exit;
+        /**
+        My WRONG output = YZZYZYYZZYYZYZZYZZYZYYZZYYZYZZY
+
+        My RIGHT output = YZZYZYYZZYYZYZZYZYYZZYYZYZZYZZY
+         */
+        var_dump(strlen($strings[0]), strlen($expected[0]));
+        var_dump($strings[0] == $expected[0]);
         var_dump($strings[0]);
         var_dump($expected[0]);
         exit;
