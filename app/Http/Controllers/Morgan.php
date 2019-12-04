@@ -33,7 +33,6 @@ class Morgan extends Controller
     }
 
     public function morganAndString($a, $b){
-        dd($a, $b);
         $string = '';
         while(isset($a[0]) && isset($b[0])){
             $ord_first_a = ord($a[0]);
@@ -120,24 +119,26 @@ class Morgan extends Controller
         $stdin = fopen(storage_path($root_files_path . 'input' . $filename . '.txt'), "r");
         fscanf($stdin, "%d\n", $t);
         $strings = [];
-        $test_this_only = 0;
+//        $test_this_only = 0;
         for ($t_itr = 0; $t_itr < $t; $t_itr++) {
             $a = '';
             fscanf($stdin, "%[^\n]", $a);
             $b = '';
             fscanf($stdin, "%[^\n]", $b);
 //             $a = 'JACK';
-             $a = 'ABACABA';
+             $a = 'BAA';
 //             $b = 'DANIEL';
-             $b = 'ABACABA';
-            if($test_this_only === $t_itr){
+             $b = 'BA';
+//            if($test_this_only === $t_itr){
                 $result = $this->morganAndString($a, $b);
+                dd($result, $result === 'BAABA');
+                $strings[] = $result;
                 // var_dump($result === 'AABAABA', 'AABAABA');
                 // dump($result, $a, $b, $this->arr_string, $result);
                 // exit;
-                $strings[$test_this_only] = $result;
-                break;
-            }
+//                $strings[$test_this_only] = $result;
+//                break;
+//            }
         }
         fclose($stdin);
         $stdout = fopen(storage_path($root_files_path . 'output' . $filename . '.txt'), "r");
@@ -147,10 +148,10 @@ class Morgan extends Controller
         }
         fclose($stdout);
 //        dd($strings[$test_this_only] === 'DAJACKNIEL');
-        dd($strings[$test_this_only] === 'AABABACABACABA');
-        dd($strings[$test_this_only] === $expected[$test_this_only], count($expected));
-        dd(count($strings), count($expected), $expected === $strings);
-        dd($expected === $strings);
+//        dd($strings[$test_this_only] === 'AABABACABACABA');
+//        dd($strings[$test_this_only] === $expected[$test_this_only], count($expected));
+//        dd(count($strings), count($expected), $expected === $strings);
+//        dd($expected === $strings);
         //exit;
         // dd(strlen($strings[0]), strlen($expected[0]), $strings[0] === $expected[0], $strings[0], $expected[0]);
         // dd(count($expected) === count($strings), $expected === $strings);

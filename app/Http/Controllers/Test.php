@@ -71,23 +71,23 @@ class Test extends Controller
 //        dd('aha');
 //        dd((bool)-1);
         // dd(PHP_INT_MIN, PHP_INT_MAX, PHP_INT_SIZE);
-//        $grades = [86,30,0,16,51,53,42,48,22,69,12,27,34,24,95,16,32,22,52,56,71,95];
-//        $final_grades = [];
-//        foreach($grades as $grade){
-//            $grade = intval($grade);
-//            $multiple_of = 5;
-//            $next_multiple_is = intval((round($grade)%$multiple_of === 0) ? round($grade) : round(($grade+$multiple_of/2)/$multiple_of)*$multiple_of);
-//            $next_multiple_of_5 = $next_multiple_is;
-//            if($grade < 38)
-//                $final_grades[] = $grade;
-//            else if(($next_multiple_of_5 - $grade) < 3)
-//                $final_grades[] = $next_multiple_of_5;
-//            else if(($next_multiple_of_5 - $grade) === 3)
-//                $final_grades[] = $grade;
-//            else
-//                $final_grades[] = $grade;
-//        }
-//        dd($grades, $final_grades === [86,30,0,16,51,55,42,50,22,70,12,27,34,24,95,16,32,22,52,56,71,95]);
+        $grades = [86,30,0,16,51,53,42,48,22,69,12,27,34,24,95,16,32,22,52,56,71,95];
+        $final_grades = [];
+        foreach($grades as $grade){
+            $grade = intval($grade);
+            $multiple_of = 5;
+            $next_multiple_is = intval((round($grade)%$multiple_of === 0) ? round($grade) : round(($grade+$multiple_of/2)/$multiple_of)*$multiple_of);
+            $next_multiple_of_5 = $next_multiple_is;
+            if($grade < 38)
+                $final_grades[] = $grade;
+            else if(($next_multiple_of_5 - $grade) < 3)
+                $final_grades[] = $next_multiple_of_5;
+            else if(($next_multiple_of_5 - $grade) === 3)
+                $final_grades[] = $grade;
+            else
+                $final_grades[] = $grade;
+        }
+        dd($grades, $final_grades === [86,30,0,16,51,55,42,50,22,70,12,27,34,24,95,16,32,22,52,56,71,95]);
     }
 
 //    function nextMultiple($number,$multiple_of=5) {
